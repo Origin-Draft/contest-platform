@@ -1,0 +1,109 @@
+:root {
+  --od-bg-top: #14162b;
+  --od-bg-bottom: #0b0c18;
+  --od-card: rgba(18, 21, 43, 0.94);
+  --od-card-border: rgba(255, 255, 255, 0.08);
+  --od-text: #f8f7ff;
+  --od-text-muted: #d7d5f5;
+  --od-text-soft: #a5a0d0;
+  --od-accent: #8e6dff;
+  --od-accent-strong: #5f7cff;
+  --od-accent-soft: rgba(153, 109, 255, 0.18);
+  --od-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+body.login-pf,
+.login-pf body {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--od-text);
+  background:
+    radial-gradient(circle at top, rgba(153, 109, 255, 0.25), transparent 30%),
+    linear-gradient(180deg, var(--od-bg-top) 0%, var(--od-bg-bottom) 100%);
+}
+
+.login-pf-page {
+  padding-top: 6rem;
+}
+
+#kc-header-wrapper {
+  color: var(--od-text);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: none;
+}
+
+#kc-header-wrapper::after {
+  content: 'Contest Platform';
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b7abff;
+}
+
+.login-pf .card-pf {
+  border: 1px solid var(--od-card-border);
+  border-radius: 24px;
+  background: var(--od-card);
+  box-shadow: var(--od-shadow);
+}
+
+.login-pf .card-pf p,
+.login-pf .card-pf label,
+.login-pf .card-pf .instruction,
+.login-pf .card-pf .pf-c-form__label-text {
+  color: var(--od-text-muted);
+}
+
+.login-pf a {
+  color: #b7abff;
+}
+
+.login-pf a:hover {
+  color: #ede9ff;
+}
+
+.login-pf .pf-c-button.pf-m-primary,
+.login-pf input[type='submit'] {
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--od-accent), var(--od-accent-strong));
+  color: #fff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.login-pf .pf-c-button.pf-m-primary:hover,
+.login-pf input[type='submit']:hover {
+  filter: brightness(1.05);
+}
+
+.login-pf .pf-c-form-control,
+.login-pf input[type='text'],
+.login-pf input[type='password'],
+.login-pf input[type='email'] {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(7, 8, 19, 0.72);
+  color: var(--od-text);
+}
+
+.login-pf .pf-c-form-control:focus,
+.login-pf input:focus {
+  border-color: rgba(153, 109, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(153, 109, 255, 0.18);
+}
+
+.login-pf .login-pf-signup,
+.login-pf #kc-info,
+.login-pf #kc-form-options {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.login-pf .alert-error,
+.login-pf .pf-m-danger {
+  border-radius: 14px;
+}

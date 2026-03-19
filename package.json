@@ -1,0 +1,25 @@
+{
+  "name": "contest-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:api": "pnpm --filter @origin-draft/api dev",
+    "dev:web": "pnpm --filter @origin-draft/web dev",
+    "build": "pnpm -r build",
+    "test:api": "pnpm --filter @origin-draft/api test",
+    "test:e2e": "playwright test",
+    "typecheck": "pnpm -r typecheck",
+    "check": "pnpm typecheck && pnpm build",
+    "docker:up": "docker compose -f infra/docker-compose.yml up --build",
+    "docker:down": "docker compose -f infra/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.13.10",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.2",
+    "wrangler": "^4.77.0"
+  }
+}
