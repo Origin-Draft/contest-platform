@@ -39,6 +39,53 @@ jobs:
       - name: API tests
         run: pnpm test:api
 
+  test-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium --with-deps
+
+      # docker-compose reads ../.env relative to infra/docker-compose.yml
+      - name: Create .env for docker-compose
+        run: |
+          echo "POSTGRES_DB=contest_platform" >> .env
+          echo "POSTGRES_USER=contest_user" >> .env
+          echo "POSTGRES_PASSWORD=change-me" >> .env
+          echo "KEYCLOAK_ADMIN=admin" >> .env
+          echo "KEYCLOAK_ADMIN_PASSWORD=change-me" >> .env
+          echo "KEYCLOAK_DB_NAME=keycloak" >> .env
+          echo "KEYCLOAK_DB_USER=keycloak" >> .env
+          echo "KEYCLOAK_DB_PASSWORD=change-me" >> .env
+          echo "WEB_ORIGIN=http://localhost:5173" >> .env
+
+      - name: Run e2e tests
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgres://contest_user:change-me@127.0.0.1:5432/contest_platform
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          retention-days: 7
+
   docker-build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -57,7 +104,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-and-test
+    needs: [build-and-test, test-e2e]
 
     steps:
       - uses: actions/checkout@v4
@@ -73,7 +120,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-and-test
+    needs: [build-and-test, test-e2e]
 
     steps:
       - uses: actions/checkout@v4
