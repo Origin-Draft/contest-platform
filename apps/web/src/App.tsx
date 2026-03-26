@@ -398,6 +398,12 @@ function DevToolbar({ auth }: { auth: AuthContextValue }) {
   );
 }
 
+function passwordStrengthError(pw: string): string | null {
+  if (pw.length < 8) return 'Password must be at least 8 characters.';
+  if (!/[0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pw)) return 'Password must include at least one number or symbol.';
+  return null;
+}
+
 function LoginPage() {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -405,6 +411,7 @@ function LoginPage() {
   const returnTo = searchParams.get('returnTo') || '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [formError, setFormError] = useState<string | null>(null);
   const [signUpDone, setSignUpDone] = useState(false);
@@ -416,9 +423,23 @@ function LoginPage() {
     }
   }, [auth.user, navigate, returnTo]);
 
+  const switchMode = useCallback((next: 'signin' | 'signup') => {
+    setMode(next);
+    setFormError(null);
+    setPassword('');
+    setConfirmPassword('');
+  }, []);
+
   const handleSubmit = useCallback(async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    if (mode === 'signup') {
+      const strengthErr = passwordStrengthError(password);
+      if (strengthErr) { setFormError(strengthErr); return; }
+      if (password !== confirmPassword) { setFormError('Passwords do not match.'); return; }
+    }
+
     setBusy(true);
     try {
       if (mode === 'signup') {
@@ -429,16 +450,18 @@ function LoginPage() {
         navigate(returnTo, { replace: true });
       }
     } catch (err) {
+      setPassword('');
+      setConfirmPassword('');
       setFormError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setBusy(false);
     }
-  }, [auth, email, mode, navigate, password, returnTo]);
+  }, [auth, confirmPassword, email, mode, navigate, password, returnTo]);
 
   if (signUpDone) {
     return (
       <Shell title="Check your email">
-        <section className="card card-accent">
+        <section className="card card-accent login-card">
           <h2>Check your email</h2>
           <p>We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back and sign in.</p>
           <button className="button-primary" type="button" onClick={() => { setSignUpDone(false); setMode('signin'); }}>
@@ -451,27 +474,36 @@ function LoginPage() {
 
   return (
     <Shell title={mode === 'signin' ? 'Sign in' : 'Create account'}>
-      <section className="card card-accent">
+      <section className="card card-accent login-card">
         <h2>{mode === 'signin' ? 'Sign in' : 'Create account'}</h2>
         {formError ? <p className="status status-error">{formError}</p> : null}
-        <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '24rem' }}>
+        <form onSubmit={(e) => void handleSubmit(e)} className="stack-form">
           <label>
             Email
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
           </label>
           <label>
             Password
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
           </label>
+          {mode === 'signup' && (
+            <label>
+              Confirm password
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required autoComplete="new-password" />
+            </label>
+          )}
+          {mode === 'signup' && (
+            <p className="login-hint">At least 8 characters with one number or symbol.</p>
+          )}
           <button className="button-primary" type="submit" disabled={busy}>
             {busy ? 'Please wait…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
-        <p style={{ marginTop: '1rem' }}>
+        <p className="login-switch">
           {mode === 'signin' ? (
-            <>Don&apos;t have an account? <button type="button" className="link-button" onClick={() => { setMode('signup'); setFormError(null); }}>Create one</button></>
+            <>Don&apos;t have an account? <button type="button" className="link-button" onClick={() => switchMode('signup')}>Create one</button></>
           ) : (
-            <>Already have an account? <button type="button" className="link-button" onClick={() => { setMode('signin'); setFormError(null); }}>Sign in</button></>
+            <>Already have an account? <button type="button" className="link-button" onClick={() => switchMode('signin')}>Sign in</button></>
           )}
         </p>
       </section>

@@ -371,6 +371,23 @@ a {
   padding: 0;
 }
 
+.login-card {
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.login-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #a5a0d0;
+}
+
+.login-switch {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: #c8c2ea;
+}
+
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
