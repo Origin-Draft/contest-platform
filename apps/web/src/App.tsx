@@ -882,8 +882,10 @@ function ResourcesPage() {
             theory. Grimoire bridges the gap between creative planning and structured AI context
             across concept, character, plot, drafting, and revision phases.
           </p>
-          <p className="pill-row">
-            <span className="pill">Not yet open-sourced</span>
+          <p>
+            <a className="text-link" href="https://github.com/origin-draft/grimoire" target="_blank" rel="noopener noreferrer">
+              Writing system on GitHub ↗
+            </a>
           </p>
         </article>
 
