@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
-const username = process.env.PLAYWRIGHT_SMOKE_USERNAME ?? 'organizer-smoke';
-const password = process.env.PLAYWRIGHT_SMOKE_PASSWORD ?? 'OrganizerSmoke123!';
-const judgeUsername = process.env.PLAYWRIGHT_JUDGE_USERNAME ?? 'judge-smoke';
+const organizerEmail = process.env.PLAYWRIGHT_ORGANIZER_EMAIL ?? 'organizer-smoke@origin-draft.test';
+const organizerPassword = process.env.PLAYWRIGHT_ORGANIZER_PASSWORD ?? 'OrganizerSmoke123!';
+const judgeEmail = process.env.PLAYWRIGHT_JUDGE_EMAIL ?? 'judge-smoke@origin-draft.test';
 const judgePassword = process.env.PLAYWRIGHT_JUDGE_PASSWORD ?? 'JudgeSmoke123!';
-const unassignedJudgeUsername = process.env.PLAYWRIGHT_UNASSIGNED_JUDGE_USERNAME ?? 'judge-unassigned-smoke';
+const unassignedJudgeEmail = process.env.PLAYWRIGHT_UNASSIGNED_JUDGE_EMAIL ?? 'judge-unassigned-smoke@origin-draft.test';
 const unassignedJudgePassword = process.env.PLAYWRIGHT_UNASSIGNED_JUDGE_PASSWORD ?? 'JudgeUnassigned123!';
-const entrantUsername = process.env.PLAYWRIGHT_ENTRANT_USERNAME ?? 'entrant-smoke';
+const entrantEmail = process.env.PLAYWRIGHT_ENTRANT_EMAIL ?? 'entrant-smoke@origin-draft.test';
 const entrantPassword = process.env.PLAYWRIGHT_ENTRANT_PASSWORD ?? 'EntrantSmoke123!';
 const seededEntryPath = '/submissions/entry-001';
 const seededEntryTitle = 'The Last Warm Compiler';
@@ -15,62 +15,64 @@ const seededContestTitle = 'Neon Ink Spring 2026';
 const seededAuthors = 'Ari Vale, Sam Osei, Jun Park';
 const hiddenForJudgesText = 'Hidden for judges by contest policy.';
 
-async function loginWithKeycloak(page: Page, credentials?: { username: string; password: string; returnPath?: string }) {
-  const nextUsername = credentials?.username ?? username;
-  const nextPassword = credentials?.password ?? password;
+async function loginWithSupabase(page: Page, credentials?: { email: string; password: string; returnPath?: string }) {
+  const nextEmail = credentials?.email ?? organizerEmail;
+  const nextPassword = credentials?.password ?? organizerPassword;
   const returnPath = credentials?.returnPath ?? '/';
 
   await page.goto(returnPath);
 
-  await expect(page.getByRole('button', { name: /sign in with keycloak/i })).toBeVisible();
-  await page.getByRole('button', { name: /sign in with keycloak/i }).click();
+  await expect(page.getByRole('heading', { name: /sign in to continue/i })).toBeVisible();
+  await page.locator('section.empty-state').getByRole('button', { name: /^sign in$/i }).click();
 
-  await expect(page).toHaveURL(/localhost:8080|127\.0\.0\.1:8080/);
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+  await expect(page.locator('h2', { hasText: /^sign in$/i })).toBeVisible();
 
-  const usernameInput = page.locator('input[name="username"], input[name="email"], input[autocomplete="username"]').first();
-  await expect(usernameInput).toBeVisible();
-  await usernameInput.fill(nextUsername);
+  await page.getByLabel('Email').fill(nextEmail);
+  await page.getByLabel('Password', { exact: true }).fill(nextPassword);
+  await page.locator('form.stack-form button[type="submit"]').click();
 
-  const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
-  await passwordInput.fill(nextPassword);
-
-  const submitButton = page.getByRole('button', { name: /sign in|log in/i }).first();
-  await submitButton.click();
-
-  await expect(page).toHaveURL(/localhost:4174|127\.0\.0\.1:4174/, { timeout: 15000 });
+  await expect(page).toHaveURL((url) => url.pathname === returnPath, { timeout: 15000 });
   await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible({ timeout: 15000 });
 }
 
 test('organizer route requires authentication before login', async ({ page }) => {
   await page.goto('/organizer');
 
-  await expect(page.getByRole('heading', { name: /authentication required/i })).toBeVisible();
-  await expect(page.getByRole('button', { name: /sign in with keycloak/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /sign in to continue/i })).toBeVisible();
+  await expect(page.locator('section.empty-state').getByRole('button', { name: /^sign in$/i })).toBeVisible();
 });
 
-test('organizer can sign in via Keycloak and open organizer tools', async ({ page }) => {
-  await loginWithKeycloak(page);
+test('organizer can sign in and open organizer tools', async ({ page }) => {
+  await loginWithSupabase(page, {
+    email: organizerEmail,
+    password: organizerPassword,
+    returnPath: '/organizer',
+  });
 
-  await page.goto('/organizer');
+  await expect(page.getByRole('heading', { level: 1, name: /organizer admin/i })).toBeVisible();
   await expect(page.getByRole('heading', { name: /control center/i })).toBeVisible();
 });
 
 test('organizer can sign out and loses organizer access', async ({ page }) => {
-  await loginWithKeycloak(page);
+  await loginWithSupabase(page, {
+    email: organizerEmail,
+    password: organizerPassword,
+    returnPath: '/organizer',
+  });
 
   await page.getByRole('button', { name: /sign out/i }).click();
 
-  await expect(page).toHaveURL(/localhost:4174|127\.0\.0\.1:4174/, { timeout: 15000 });
-  await expect(page.getByRole('button', { name: /sign in with keycloak/i })).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText(/no active session yet/i)).toBeVisible();
+  await expect(page).toHaveURL((url) => url.pathname === '/', { timeout: 15000 });
+  await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible({ timeout: 15000 });
 
   await page.goto('/organizer');
-  await expect(page.getByRole('heading', { name: /authentication required/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /sign in to continue/i })).toBeVisible();
 });
 
 test('judge can access judge tools but not organizer admin', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username: judgeUsername,
+  await loginWithSupabase(page, {
+    email: judgeEmail,
     password: judgePassword,
     returnPath: '/judge',
   });
@@ -80,12 +82,12 @@ test('judge can access judge tools but not organizer admin', async ({ page }) =>
 
   await page.goto('/organizer');
   await expect(page.getByRole('heading', { name: /access restricted/i })).toBeVisible();
-  await expect(page.getByText(/requires one of these roles: organizer, platform-admin/i)).toBeVisible();
+  await expect(page.getByText(/doesn't have the required role/i)).toBeVisible();
 });
 
 test('entrant can access entrant portal but not judge or organizer routes', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username: entrantUsername,
+  await loginWithSupabase(page, {
+    email: entrantEmail,
     password: entrantPassword,
     returnPath: '/entrant',
   });
@@ -95,17 +97,17 @@ test('entrant can access entrant portal but not judge or organizer routes', asyn
 
   await page.goto('/judge');
   await expect(page.getByRole('heading', { name: /access restricted/i })).toBeVisible();
-  await expect(page.getByText(/requires one of these roles: judge, organizer, platform-admin/i)).toBeVisible();
+  await expect(page.getByText(/doesn't have the required role/i)).toBeVisible();
 
   await page.goto('/organizer');
   await expect(page.getByRole('heading', { name: /access restricted/i })).toBeVisible();
-  await expect(page.getByText(/requires one of these roles: organizer, platform-admin/i)).toBeVisible();
+  await expect(page.getByText(/doesn't have the required role/i)).toBeVisible();
 });
 
 test('organizer can create a draft contest and open its preview', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username,
-    password,
+  await loginWithSupabase(page, {
+    email: organizerEmail,
+    password: organizerPassword,
     returnPath: '/organizer',
   });
 
@@ -129,20 +131,20 @@ test('organizer can create a draft contest and open its preview', async ({ page 
 });
 
 test('judge cannot access organizer contest preview route', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username: judgeUsername,
+  await loginWithSupabase(page, {
+    email: judgeEmail,
     password: judgePassword,
     returnPath: '/judge',
   });
 
   await page.goto('/organizer/contests/contest-neon-ink/preview');
   await expect(page.getByRole('heading', { name: /access restricted/i })).toBeVisible();
-  await expect(page.getByText(/requires one of these roles: organizer, platform-admin/i)).toBeVisible();
+  await expect(page.getByText(/doesn't have the required role/i)).toBeVisible();
 });
 
 test('judge cannot open a submission that is not assigned to them', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username: unassignedJudgeUsername,
+  await loginWithSupabase(page, {
+    email: unassignedJudgeEmail,
     password: unassignedJudgePassword,
     returnPath: seededEntryPath,
   });
@@ -151,9 +153,9 @@ test('judge cannot open a submission that is not assigned to them', async ({ pag
 });
 
 test('organizer sees full submission detail with provenance and artifacts tools', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username,
-    password,
+  await loginWithSupabase(page, {
+    email: organizerEmail,
+    password: organizerPassword,
     returnPath: seededEntryPath,
   });
 
@@ -178,9 +180,9 @@ test('organizer sees full submission detail with provenance and artifacts tools'
 });
 
 test('organizer can assign a judge and that judge sees blinded submission detail', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username,
-    password,
+  await loginWithSupabase(page, {
+    email: organizerEmail,
+    password: organizerPassword,
     returnPath: '/organizer',
   });
 
@@ -190,10 +192,10 @@ test('organizer can assign a judge and that judge sees blinded submission detail
   await expect(page.getByText(/assigned the last warm compiler to judge smoke\./i)).toBeVisible();
 
   await page.getByRole('button', { name: /sign out/i }).click();
-  await expect(page.getByRole('button', { name: /sign in with keycloak/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible();
 
-  await loginWithKeycloak(page, {
-    username: judgeUsername,
+  await loginWithSupabase(page, {
+    email: judgeEmail,
     password: judgePassword,
     returnPath: '/judge',
   });
@@ -220,8 +222,8 @@ test('organizer can assign a judge and that judge sees blinded submission detail
 });
 
 test('entrant cannot open another entrant submission detail', async ({ page }) => {
-  await loginWithKeycloak(page, {
-    username: entrantUsername,
+  await loginWithSupabase(page, {
+    email: entrantEmail,
     password: entrantPassword,
     returnPath: seededEntryPath,
   });
