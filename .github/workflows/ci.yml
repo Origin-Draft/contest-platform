@@ -76,10 +76,21 @@ jobs:
           echo "KEYCLOAK_DB_PASSWORD=change-me" >> .env
           echo "WEB_ORIGIN=http://localhost:5173" >> .env
 
+      # Playwright launches webServers BEFORE globalSetup, so Docker
+      # services must already be running when tests start.
+      - name: Start infrastructure (Postgres + Keycloak)
+        run: |
+          docker compose -f infra/docker-compose.yml up -d postgres keycloak-postgres keycloak
+          timeout 120 bash -c 'until curl -sf http://127.0.0.1:8080/realms/contest-platform > /dev/null 2>&1; do sleep 2; done'
+
       - name: Run e2e tests
         run: pnpm test:e2e
         env:
           DATABASE_URL: postgres://contest_user:change-me@127.0.0.1:5432/contest_platform
+
+      - name: Stop infrastructure
+        if: always()
+        run: docker compose -f infra/docker-compose.yml down
 
       - name: Upload test artifacts
         if: failure()
