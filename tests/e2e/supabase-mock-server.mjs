@@ -92,6 +92,27 @@ async function readJsonBody(request) {
   }
 }
 
+function makeAccessToken(user) {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  return signJwt({
+    aud: 'authenticated',
+    role: 'authenticated',
+    iss: issuer,
+    sub: user.id,
+    email: user.email,
+    phone: '',
+    app_metadata: {
+      provider: 'email',
+      roles: user.roles,
+    },
+    user_metadata: {
+      full_name: user.fullName,
+    },
+    iat: nowSeconds,
+    exp: nowSeconds + 60 * 60,
+  });
+}
+
 const server = createServer(async (request, response) => {
   if (!request.url) {
     sendJson(response, 400, { msg: 'Missing URL' });
@@ -122,30 +143,53 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    const accessToken = signJwt({
-      aud: 'authenticated',
-      role: 'authenticated',
-      iss: issuer,
-      sub: user.id,
-      email: user.email,
-      phone: '',
-      app_metadata: {
-        provider: 'email',
-        roles: user.roles,
-      },
-      user_metadata: {
-        full_name: user.fullName,
-      },
-      iat: nowSeconds,
-      exp: nowSeconds + 60 * 60,
-    });
-
     sendJson(response, 200, {
-      access_token: accessToken,
+      access_token: makeAccessToken(user),
       token_type: 'bearer',
       expires_in: 3600,
       refresh_token: `refresh-${randomUUID()}`,
+    });
+    return;
+  }
+
+  // PKCE grant — used for server-generated email confirmation codes (no code_verifier required).
+  // auth_code format expected by this mock: "confirm-{email}"
+  if (request.method === 'POST' && url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce') {
+    const body = await readJsonBody(request);
+    const authCode = typeof body.auth_code === 'string' ? body.auth_code : '';
+    const email = authCode.startsWith('confirm-') ? authCode.slice('confirm-'.length).toLowerCase() : '';
+    const user = email ? userByEmail.get(email) : null;
+
+    if (!user) {
+      sendJson(response, 400, { error_description: 'Invalid or expired confirmation code' });
+      return;
+    }
+
+    sendJson(response, 200, {
+      access_token: makeAccessToken(user),
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: `refresh-${randomUUID()}`,
+    });
+    return;
+  }
+
+  // Test-only helper: return a pre-signed token for E2E hash-fragment callback tests.
+  // Never expose a route like this in production — this mock is only used in E2E.
+  if (request.method === 'GET' && url.pathname === '/auth/v1/test/signed-token') {
+    const email = url.searchParams.get('email')?.toLowerCase().trim() ?? '';
+    const user = userByEmail.get(email);
+
+    if (!user) {
+      sendJson(response, 404, { msg: `No test user found for email: ${email}` });
+      return;
+    }
+
+    sendJson(response, 200, {
+      access_token: makeAccessToken(user),
+      token_type: 'bearer',
+      expires_in: 3600,
+      refresh_token: `refresh-test-${randomUUID()}`,
     });
     return;
   }
