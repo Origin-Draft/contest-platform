@@ -627,12 +627,11 @@ function HomePage() {
   }, []);
 
   return (
-    <Shell title="Run AI-Assisted Writing Contests" showHeroDescription>
+    <Shell title="Compete in AI-Assisted Writing Contests" showHeroDescription>
 
       {/* Hero CTAs */}
       <div className="hero-actions">
-        <a href="#contests" className="button-primary inline-button">Enter a Contest</a>
-        <Link to="/organizer" className="button-secondary inline-button">Run a Contest</Link>
+        <a href="#contests" className="button-primary inline-button">Find a Contest</a>
       </div>
 
       {/* Trust strip */}
@@ -664,42 +663,20 @@ function HomePage() {
         <div className="grid three-up">
           <div className="step-card card">
             <span className="step-number">1</span>
-            <h3>Create a contest</h3>
-            <p>Rules, rubrics, deadlines.</p>
+            <h3>Find a contest</h3>
+            <p>Review rules, rubrics, and deadlines.</p>
           </div>
           <div className="step-card card">
             <span className="step-number">2</span>
-            <h3>Accept submissions</h3>
-            <p>Entries with provenance and consent.</p>
+            <h3>Write &amp; submit</h3>
+            <p>Draft your entry and declare your tools.</p>
           </div>
           <div className="step-card card">
             <span className="step-number">3</span>
-            <h3>Judge &amp; publish</h3>
-            <p>Blind scoring and results.</p>
+            <h3>Get scored</h3>
+            <p>Receive blind judging and transparent results.</p>
           </div>
         </div>
-      </section>
-
-      {/* Role entry cards */}
-      <section className="grid three-up section-divided">
-        <Link to="/entrant" className="role-card card">
-          <span className="role-icon">✍️</span>
-          <h3>Enter a Contest</h3>
-          <p>Submit writing and track results</p>
-          <span className="role-cta">Enter <span className="cta-arrow">→</span></span>
-        </Link>
-        <Link to="/judge" className="role-card card">
-          <span className="role-icon">⚖️</span>
-          <h3>Judge Submissions</h3>
-          <p>Score blinded entries</p>
-          <span className="role-cta">Judge <span className="cta-arrow">→</span></span>
-        </Link>
-        <Link to="/organizer" className="role-card card">
-          <span className="role-icon">🏆</span>
-          <h3>Run a Contest</h3>
-          <p>Create and manage competitions</p>
-          <span className="role-cta">Organize <span className="cta-arrow">→</span></span>
-        </Link>
       </section>
 
       {/* Active contests */}
@@ -712,16 +689,14 @@ function HomePage() {
         {error && !isLoading ? (
           <article className="card empty-state">
             <h3>No contests yet</h3>
-            <p>Be the first to launch one.</p>
-            <Link className="button-primary inline-button" to="/organizer">Create First Contest</Link>
+            <p>Check back soon for new competitions.</p>
           </article>
         ) : null}
 
         {!isLoading && !error && liveContests.length === 0 ? (
           <article className="card empty-state">
             <h3>No contests yet</h3>
-            <p>Be the first to launch one.</p>
-            <Link className="button-primary inline-button" to="/organizer">Create First Contest</Link>
+            <p>Check back soon for new competitions.</p>
           </article>
         ) : null}
 
