@@ -92,6 +92,15 @@ async function readJsonBody(request) {
   }
 }
 
+async function readFormBody(request) {
+  const chunks = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  if (chunks.length === 0) return new URLSearchParams();
+  return new URLSearchParams(Buffer.concat(chunks).toString('utf8'));
+}
+
 function makeAccessToken(user) {
   const nowSeconds = Math.floor(Date.now() / 1000);
   return signJwt({
@@ -155,8 +164,8 @@ const server = createServer(async (request, response) => {
   // PKCE grant — used for server-generated email confirmation codes (no code_verifier required).
   // auth_code format expected by this mock: "confirm-{email}"
   if (request.method === 'POST' && url.pathname === '/auth/v1/token' && url.searchParams.get('grant_type') === 'pkce') {
-    const body = await readJsonBody(request);
-    const authCode = typeof body.auth_code === 'string' ? body.auth_code : '';
+    const body = await readFormBody(request);
+    const authCode = body.get('auth_code') ?? '';
     const email = authCode.startsWith('confirm-') ? authCode.slice('confirm-'.length).toLowerCase() : '';
     const user = email ? userByEmail.get(email) : null;
 
