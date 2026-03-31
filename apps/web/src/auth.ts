@@ -389,6 +389,7 @@ async function beginLogin(config: SessionConfig, returnTo: string): Promise<void
 async function completeLogin(
   config: SessionConfig,
   search: string,
+  hash = '',
 ): Promise<{ session: StoredAuthSession; returnTo: string }> {
   const params = new URLSearchParams(search);
   const error = params.get('error');
@@ -396,17 +397,55 @@ async function completeLogin(
     throw new Error(params.get('error_description') ?? error);
   }
 
+  // Handle Supabase hash-fragment callback (email confirmation with direct access_token)
+  if (config.authProvider === 'supabase' && hash) {
+    const hashParams = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
+    const hashError = hashParams.get('error');
+    if (hashError) {
+      throw new Error(hashParams.get('error_description') ?? hashError);
+    }
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const expiresIn = Number(hashParams.get('expires_in') ?? 3600);
+    if (accessToken) {
+      const session = normalizeTokenResponse({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? undefined,
+        expires_in: expiresIn,
+      });
+      writeStoredAuthSession(session);
+      const pkceSession = readPkceSession();
+      clearPkceSession();
+      return { session, returnTo: pkceSession?.returnTo ?? '/' };
+    }
+  }
+
   const code = params.get('code');
   const state = params.get('state');
   const pkceSession = readPkceSession();
 
+  // Handle Supabase server-generated PKCE code (email confirmation without a client-initiated flow)
+  if (config.authProvider === 'supabase' && code && !state && !pkceSession) {
+    const body = new URLSearchParams({
+      grant_type: 'pkce',
+      auth_code: code,
+    });
+    try {
+      const session = await exchangeToken(config, body);
+      clearPkceSession();
+      return { session, returnTo: '/' };
+    } catch {
+      throw new Error('Could not complete sign-in from this link. Please sign in with your email and password instead.');
+    }
+  }
+
   if (!code || !state || !pkceSession) {
-    throw new Error('Missing OIDC callback state. Please sign in again.');
+    throw new Error('Missing sign-in state. Please try signing in again.');
   }
 
   if (pkceSession.state !== state) {
     clearPkceSession();
-    throw new Error('OIDC state validation failed. Please sign in again.');
+    throw new Error('Sign-in state mismatch. Please try signing in again.');
   }
 
   let body: URLSearchParams;
@@ -551,10 +590,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         let returnTo: string | null = null;
 
         if (location.pathname === callbackPath) {
-          const callbackSignature = `${location.pathname}${location.search}`;
+          const callbackSignature = `${location.pathname}${location.search}${location.hash}`;
           if (handledCallbackRef.current !== callbackSignature) {
             handledCallbackRef.current = callbackSignature;
-            const callbackResult = await completeLogin(nextConfig, location.search);
+            const callbackResult = await completeLogin(nextConfig, location.search, location.hash);
             session = callbackResult.session;
             returnTo = callbackResult.returnTo;
           } else {
