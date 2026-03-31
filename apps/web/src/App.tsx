@@ -2794,7 +2794,10 @@ export function App() {
           <DevToolbar auth={auth} />
           {auth.user ? (
             <>
-              <span className="nav-user">{auth.user.displayName}</span>
+              <span className="nav-user-pill">
+                <span className="nav-user-avatar">{auth.user.displayName.charAt(0).toUpperCase()}</span>
+                <span className="nav-user-name">{auth.user.displayName}</span>
+              </span>
               <button className="button-secondary nav-button" type="button" onClick={() => void auth.signOut()}>
                 Sign Out
               </button>
