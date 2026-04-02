@@ -322,19 +322,28 @@ function csvToList(value: string) {
 
 const isProduction = siteModeConfig.mode === 'production';
 
-function Shell({ title, subtitle, children, showHeroDescription = false }: { title: string; subtitle?: string; children: ReactNode; showHeroDescription?: boolean }) {
+function Shell({ title, subtitle, children, showHeroDescription = false, heroBanner }: { title: string; subtitle?: string; children: ReactNode; showHeroDescription?: boolean; heroBanner?: string }) {
   return (
     <div className="page-shell">
-      <header className="hero">
-        <div className="hero-topline">
-          <p className="eyebrow">Origin Draft</p>
-        </div>
-        <h1>{title}</h1>
-        {subtitle && <p className="hero-copy">{subtitle}</p>}
-        {showHeroDescription && (
-          <p className="hero-copy">
-            Built for fair, transparent AI-assisted writing competitions.
-          </p>
+      <header className={heroBanner ? 'hero hero-banner' : 'hero'}>
+        {heroBanner ? (
+          <>
+            <h1 className="sr-only">{title}</h1>
+            <img src={heroBanner} alt="" className="hero-banner-img" aria-hidden="true" />
+          </>
+        ) : (
+          <>
+            <div className="hero-topline">
+              <p className="eyebrow">Origin Draft</p>
+            </div>
+            <h1>{title}</h1>
+            {subtitle && <p className="hero-copy">{subtitle}</p>}
+            {showHeroDescription && (
+              <p className="hero-copy">
+                Built for fair, transparent AI-assisted writing competitions.
+              </p>
+            )}
+          </>
         )}
       </header>
       {children}
@@ -460,7 +469,7 @@ function LoginPage() {
 
   if (signUpDone) {
     return (
-      <Shell title="Check your email">
+      <Shell title="Check your email" heroBanner="/login-banner.png">
         <section className="card card-accent login-card">
           <h2>Check your email</h2>
           <p>We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back and sign in.</p>
@@ -473,7 +482,7 @@ function LoginPage() {
   }
 
   return (
-    <Shell title={mode === 'signin' ? 'Sign in' : 'Create account'}>
+    <Shell title={mode === 'signin' ? 'Sign in' : 'Create account'} heroBanner="/login-banner.png">
       <section className="card card-accent login-card">
         <h2>{mode === 'signin' ? 'Sign in' : 'Create account'}</h2>
         {formError ? <p className="status status-error">{formError}</p> : null}
@@ -627,7 +636,7 @@ function HomePage() {
   }, []);
 
   return (
-    <Shell title="Compete in AI-Assisted Writing Contests" showHeroDescription>
+    <Shell title="Compete in AI-Assisted Writing Contests" heroBanner="/contest-banner.png">
 
       {/* Hero CTAs */}
       <div className="hero-actions">
@@ -636,7 +645,6 @@ function HomePage() {
 
       {/* Trust strip */}
       <section className="trust-section">
-        <h2 className="trust-heading">Why Origin Draft</h2>
         <div className="trust-strip">
           <div className="trust-item">
             <span className="trust-icon">🔒</span>
@@ -810,7 +818,7 @@ function HomePage() {
 
 function ResourcesPage() {
   return (
-    <Shell title="Resources" subtitle="The open specifications and tools behind Origin Draft.">
+    <Shell title="Resources" subtitle="The open specifications and tools behind Origin Draft." heroBanner="/resources-banner.png">
       <section className="card card-accent">
         <h2>About Origin Draft</h2>
         <p>
