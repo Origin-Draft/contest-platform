@@ -170,7 +170,11 @@ async function resolveSessionUser(
   if (token) {
     try {
       return await verifyToken(token);
-    } catch {
+    } catch (err) {
+      request.log.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        'JWT verification failed — token rejected',
+      );
       return null;
     }
   }
