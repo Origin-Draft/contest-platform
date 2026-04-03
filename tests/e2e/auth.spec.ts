@@ -192,7 +192,10 @@ test('organizer can assign a judge and that judge sees blinded submission detail
   await expect(page.getByText(/assigned the last warm compiler to judge smoke\./i)).toBeVisible();
 
   await page.getByRole('button', { name: /sign out/i }).click();
-  await expect(page.getByRole('button', { name: /^sign in$/i })).toBeVisible();
+  // Scope to the nav bar — after sign-out from /organizer the page may still show
+  // the RequireRoles "Sign In" button before the redirect lands, causing a strict-mode
+  // violation if we query the whole document.
+  await expect(page.locator('.nav-right').getByRole('button', { name: /^sign in$/i })).toBeVisible();
 
   await loginWithSupabase(page, {
     email: judgeEmail,
