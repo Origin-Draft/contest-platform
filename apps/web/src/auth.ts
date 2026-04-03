@@ -677,6 +677,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const session = await supabasePasswordAuth(config, email, password);
       const me = await fetchSessionUser(devSession, session.accessToken);
+      if (!me.user) {
+        clearStoredAuthSession();
+        throw new Error('Sign-in succeeded but the session could not be verified. Please try again or contact support.');
+      }
       setAccessToken(session.accessToken);
       setUser(me.user);
     } catch (err) {
