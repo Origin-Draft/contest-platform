@@ -590,10 +590,8 @@ ul {
 .hero-banner-img {
   width: 100%;
   height: auto;
-  max-height: 480px;
   display: block;
   border-radius: 20px;
-  object-fit: cover;
 }
 
 /* Hero action buttons */

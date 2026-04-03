@@ -128,22 +128,48 @@ function createKeycloakVerifier(config: AppConfig): JwtVerifier {
 }
 
 function createSupabaseVerifier(config: AppConfig): JwtVerifier {
-  const secret = new TextEncoder().encode(config.supabaseJwtSecret);
+  // Supabase projects may sign JWTs with either HS256 (symmetric, using the
+  // JWT secret) or ES256 (asymmetric, using a JWKS endpoint at
+  // {supabaseUrl}/auth/v1/.well-known/jwks.json).  We try JWKS first because
+  // newer Supabase projects default to ES256; fall back to the symmetric
+  // secret for HS256 projects.
+  const jwks = createRemoteJWKSet(
+    new URL(`${config.supabaseUrl}/auth/v1/.well-known/jwks.json`),
+  );
+  const symmetricSecret = config.supabaseJwtSecret
+    ? new TextEncoder().encode(config.supabaseJwtSecret)
+    : null;
 
   return async (token) => {
-    const verification = await jwtVerify(token, secret, {
-      issuer: `${config.supabaseUrl}/auth/v1`,
-    });
+    const issuer = `${config.supabaseUrl}/auth/v1`;
 
-    const payload = verification.payload as Record<string, unknown>;
+    // Try asymmetric (ES256 via JWKS) first
+    try {
+      const verification = await jwtVerify(token, jwks, { issuer });
+      const payload = verification.payload as Record<string, unknown>;
+      return extractSupabaseUser(payload);
+    } catch {
+      // Fall through to symmetric attempt
+    }
 
-    return {
-      id: String(payload.sub ?? 'unknown'),
-      displayName: String(payload.user_metadata && typeof payload.user_metadata === 'object' && 'full_name' in payload.user_metadata ? payload.user_metadata.full_name : payload.email ?? 'Supabase User'),
-      email: typeof payload.email === 'string' ? payload.email : null,
-      roles: parseSupabaseRoles(payload),
-      authSource: 'supabase',
-    };
+    // Fall back to symmetric (HS256 via JWT secret)
+    if (symmetricSecret) {
+      const verification = await jwtVerify(token, symmetricSecret, { issuer });
+      const payload = verification.payload as Record<string, unknown>;
+      return extractSupabaseUser(payload);
+    }
+
+    throw new Error('All Supabase JWT verification methods failed');
+  };
+}
+
+function extractSupabaseUser(payload: Record<string, unknown>): SessionUser {
+  return {
+    id: String(payload.sub ?? 'unknown'),
+    displayName: String(payload.user_metadata && typeof payload.user_metadata === 'object' && 'full_name' in payload.user_metadata ? payload.user_metadata.full_name : payload.email ?? 'Supabase User'),
+    email: typeof payload.email === 'string' ? payload.email : null,
+    roles: parseSupabaseRoles(payload),
+    authSource: 'supabase',
   };
 }
 
